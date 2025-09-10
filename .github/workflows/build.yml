@@ -1,10 +1,15 @@
 name: Unzip and Commit CoramTix Source
 
+# Run manually or on pushes to main if you want.
 on:
-  workflow_dispatch:   # run manually from Actions tab
+  workflow_dispatch:
   push:
     branches:
       - main
+
+# Give the workflow permission to write repository contents
+permissions:
+  contents: write
 
 jobs:
   unzip-and-commit:
@@ -14,26 +19,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # keep credentials so we can push
           persist-credentials: true
+          fetch-depth: 0
 
       - name: Install unzip
-        run: sudo apt-get install -y unzip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
 
-      - name: Remove old extracted folder (if exists)
-        run: rm -rf coramtix-main
+      - name: Remove old extracted folder (if any)
+        run: rm -rf coramtix-main || true
 
       - name: Unzip source
-        run: unzip coramtix-main.zip -d ./coramtix-main
+        run: unzip -o coramtix-main.zip -d ./coramtix-main
 
-      - name: Show extracted files
-        run: |
-          echo "📂 Extracted project structure:"
-          ls -R ./coramtix-main | head -n 200
+      - name: Show extracted files (first 200 lines)
+        run: ls -R ./coramtix-main | head -n 200
 
-      - name: Commit unzipped source
+      - name: Commit unzipped source (push to main)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           git add coramtix-main
           git commit -m "Unzipped coramtix-main.zip into repository" || echo "No changes to commit"
-          git push
+          # Push with token auth (works reliably)
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main
