@@ -1,7 +1,10 @@
 name: Build CoramTix Binaries
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # run manually from Actions tab
+  push:
+    branches:
+      - main           # also run when pushing to main branch
 
 jobs:
   build:
@@ -14,24 +17,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install unzip
+        run: sudo apt-get install -y unzip
+
       - name: Unzip source
-        run: |
-          sudo apt-get install -y unzip
-          unzip coramtix-main.zip -d source
+        run: unzip coramtix-main.zip -d source
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
+      - name: Check for go.mod
+        run: |
+          cd source/coramtix-main || cd source
+          if [ ! -f go.mod ]; then
+            echo "⚠️ go.mod not found, initializing..."
+            go mod init coramtix
+            go mod tidy
+          fi
+
       - name: Build binary
         run: |
-          cd source
+          cd source/coramtix-main || cd source
           mkdir -p build
-          GOOS=linux GOARCH=${{ matrix.goarch }} go build -o build/coramtix_linux_${{ matrix.goarch }} wings.go
+          GOOS=linux GOARCH=${{ matrix.goarch }} go build -o build/coramtix_linux_${{ matrix.goarch }} ./wings.go
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: coramtix-${{ matrix.goarch }}
-          path: source/build/*
+          path: |
+            source/coramtix-main/build/*
+            source/build/*
