@@ -1,7 +1,7 @@
 name: Build CoramTix Binaries
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # run manually
   push:
     branches:
       - main
@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install unzip
         run: sudo apt-get install -y unzip
@@ -28,20 +28,26 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Check for go.mod
+      - name: Ensure Go module
         run: |
           cd source
           if [ ! -f go.mod ]; then
-            echo "⚠️ go.mod not found, initializing..."
+            echo "⚠️ go.mod not found, creating..."
             go mod init coramtix
             go mod tidy
           fi
+
+      - name: Show folder tree (debug)
+        run: |
+          echo "📂 Project structure after unzip:"
+          ls -R source | head -n 100
 
       - name: Build binary
         run: |
           cd source
           mkdir -p build
-          GOOS=linux GOARCH=${{ matrix.goarch }} go build -o build/coramtix_linux_${{ matrix.goarch }} ./wings.go
+          GOOS=linux GOARCH=${{ matrix.goarch }} go build \
+            -o build/coramtix_linux_${{ matrix.goarch }} ./wings.go
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
