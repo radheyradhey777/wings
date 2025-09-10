@@ -1,7 +1,7 @@
 name: Build CoramTix Binaries
 
 on:
-  workflow_dispatch:   # run manually
+  workflow_dispatch:   # Run manually from Actions tab
   push:
     branches:
       - main
@@ -28,26 +28,23 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Ensure Go module
-        run: |
-          cd source
-          if [ ! -f go.mod ]; then
-            echo "⚠️ go.mod not found, creating..."
-            go mod init coramtix
-            go mod tidy
-          fi
-
-      - name: Show folder tree (debug)
+      - name: Show folder structure
         run: |
           echo "📂 Project structure after unzip:"
-          ls -R source | head -n 100
+          ls -R source | head -n 200
 
       - name: Build binary
         run: |
           cd source
           mkdir -p build
-          GOOS=linux GOARCH=${{ matrix.goarch }} go build \
-            -o build/coramtix_linux_${{ matrix.goarch }} ./wings.go
+          # find the wings.go file automatically
+          WINGS_PATH=$(find . -type f -name "wings.go" | head -n 1)
+          if [ -z "$WINGS_PATH" ]; then
+            echo "❌ wings.go not found!"
+            exit 1
+          fi
+          echo "✅ Found wings.go at $WINGS_PATH"
+          GOOS=linux GOARCH=${{ matrix.goarch }} go build -o build/coramtix_linux_${{ matrix.goarch }} $WINGS_PATH
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
