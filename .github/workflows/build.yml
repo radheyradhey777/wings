@@ -1,0 +1,37 @@
+name: Build CoramTix Binaries
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goarch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Unzip source
+        run: |
+          sudo apt-get install -y unzip
+          unzip coramtix-main.zip -d source
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build binary
+        run: |
+          cd source
+          mkdir -p build
+          GOOS=linux GOARCH=${{ matrix.goarch }} go build -o build/coramtix_linux_${{ matrix.goarch }} wings.go
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coramtix-${{ matrix.goarch }}
+          path: source/build/*
